@@ -1,8 +1,9 @@
 import configparser
 import logging
-import os
 import shutil
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from utils.config_manager import get_config_value, load_config
 
@@ -15,6 +16,8 @@ class FileCleaner:
         self.logger = logging.getLogger(__name__)
         self.target_dirs: list[str] = []
         self.target_extensions: list[str] = []
+        self.file_cleanup_hour: int = 1
+        self.app_start_time = datetime.now(ZoneInfo("Asia/Tokyo"))
         self._load_settings()
 
     def _load_settings(self) -> None:
@@ -37,8 +40,21 @@ class FileCleaner:
                     if ext.strip()
                 ]
 
+        # file_cleanup_hour を読み込む
+        cleanup_hour_str = get_config_value(
+            self.config, 'Settings', 'file_cleanup_hour', '1'
+        )
+        try:
+            self.file_cleanup_hour = int(cleanup_hour_str)
+        except (ValueError, TypeError):
+            self.logger.warning(
+                f"file_cleanup_hour の値が不正です: {cleanup_hour_str}。デフォルト値 1 を使用します"
+            )
+            self.file_cleanup_hour = 1
+
         self.logger.info(f"対象ディレクトリ: {self.target_dirs}")
         self.logger.info(f"対象拡張子: {self.target_extensions}")
+        self.logger.info(f"削除対象期間: {self.file_cleanup_hour}時間以前に作成されたファイル")
 
     def _get_target_directories(self) -> list[str]:
         """Pathsセクションからtarget_dirで始まるすべてのディレクトリを取得"""
@@ -56,13 +72,47 @@ class FileCleaner:
 
         return directories
 
+    def _is_file_old_enough(self, file_path: Path) -> bool:
+        """ファイルが削除対象の期間より古いかを判定"""
+        try:
+            file_ctime = file_path.stat().st_ctime
+            file_creation_time = datetime.fromtimestamp(file_ctime, ZoneInfo("Asia/Tokyo"))
+            cutoff_time = self.app_start_time - timedelta(hours=self.file_cleanup_hour)
+
+            is_old = file_creation_time < cutoff_time
+
+            if is_old:
+                self.logger.debug(
+                    f"ファイルは削除対象です: {file_path} "
+                    f"(作成日時: {file_creation_time.strftime('%Y-%m-%d %H:%M:%S')}, "
+                    f"基準時刻: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})"
+                )
+            else:
+                self.logger.debug(
+                    f"ファイルは新しすぎるため削除対象外です: {file_path} "
+                    f"(作成日時: {file_creation_time.strftime('%Y-%m-%d %H:%M:%S')}, "
+                    f"基準時刻: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})"
+                )
+
+            return is_old
+        except (OSError, ValueError) as e:
+            self.logger.warning(f"ファイル作成時刻の取得に失敗しました: {file_path} - {e}")
+            return False
+
     def _should_delete_file(self, file_path: Path) -> bool:
         """ファイルが削除対象かどうかを判定"""
-        if '*' in self.target_extensions:
-            return True
+        extension_match = False
 
-        extension = file_path.suffix.lower().lstrip('.')
-        return extension in self.target_extensions
+        if '*' in self.target_extensions:
+            extension_match = True
+        else:
+            extension = file_path.suffix.lower().lstrip('.')
+            extension_match = extension in self.target_extensions
+
+        if not extension_match:
+            return False
+
+        return self._is_file_old_enough(file_path)
 
     def _delete_file(self, file_path: Path) -> bool:
         """ファイルを削除"""

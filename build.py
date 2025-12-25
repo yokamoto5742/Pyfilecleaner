@@ -7,7 +7,7 @@ def build_executable():
     new_version = update_version()
     subprocess.run([
         "pyinstaller",
-        "--name=app_name",
+        "--name=Pyfilecleaner",
         "--windowed",
         "--add-data", "utils/config.ini:.",
         "main.py"

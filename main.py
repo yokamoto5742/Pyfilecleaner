@@ -39,15 +39,6 @@ def main() -> int:
         for i, dir_path in enumerate(cleaner.target_dirs, 1):
             print(f"  {i}. {dir_path}")
 
-        # 確認プロンプト
-        print("\n警告: 上記のディレクトリ内のファイルとフォルダが削除されます")
-        response = input("続行しますか? (y/N): ").strip().lower()
-
-        if response != 'y':
-            print("処理をキャンセルしました")
-            logger.info("ユーザーによって処理がキャンセルされました")
-            return 0
-
         # クリーンアップの実行
         results = cleaner.clean_all()
 

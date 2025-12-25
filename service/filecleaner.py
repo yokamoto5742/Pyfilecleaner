@@ -76,12 +76,10 @@ class FileCleaner:
         """ファイルが削除対象の期間より古いかを判定"""
         try:
             stat_info = file_path.stat()
-            if hasattr(stat_info, 'st_birthtime'):
-                file_timestamp = stat_info.st_birthtime
-            else:
-                file_timestamp = stat_info.st_ctime
-
-            file_creation_time = datetime.fromtimestamp(file_timestamp, ZoneInfo("Asia/Tokyo"))
+            # Windowsではst_ctimeが作成時刻を返す
+            file_creation_time = datetime.fromtimestamp(
+                stat_info.st_ctime, ZoneInfo("Asia/Tokyo")
+            )
             cutoff_time = self.app_start_time - timedelta(hours=self.file_cleanup_hour)
 
             is_old = file_creation_time < cutoff_time

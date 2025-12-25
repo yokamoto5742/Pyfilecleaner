@@ -54,7 +54,7 @@ class FileCleaner:
 
         self.logger.info(f"対象ディレクトリ: {self.target_dirs}")
         self.logger.info(f"対象拡張子: {self.target_extensions}")
-        self.logger.info(f"削除対象期間: {self.file_cleanup_hour}時間以前に作成されたファイル")
+        self.logger.info(f"削除対象期間: {self.file_cleanup_hour}時間以前に更新されたファイル")
 
     def _get_target_directories(self) -> list[str]:
         """Pathsセクションからtarget_dirで始まるすべてのディレクトリを取得"""
@@ -76,30 +76,30 @@ class FileCleaner:
         """ファイルが削除対象の期間より古いかを判定"""
         try:
             stat_info = file_path.stat()
-            # Windowsではst_ctimeが作成時刻を返す
-            file_creation_time = datetime.fromtimestamp(
-                stat_info.st_ctime, ZoneInfo("Asia/Tokyo")
+            # st_mtimeは更新日時を返す
+            file_modification_time = datetime.fromtimestamp(
+                stat_info.st_mtime, ZoneInfo("Asia/Tokyo")
             )
             cutoff_time = self.app_start_time - timedelta(hours=self.file_cleanup_hour)
 
-            is_old = file_creation_time < cutoff_time
+            is_old = file_modification_time < cutoff_time
 
             if is_old:
                 self.logger.debug(
                     f"ファイルは削除対象です: {file_path} "
-                    f"(作成日時: {file_creation_time.strftime('%Y-%m-%d %H:%M:%S')}, "
+                    f"(更新日時: {file_modification_time.strftime('%Y-%m-%d %H:%M:%S')}, "
                     f"基準時刻: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})"
                 )
             else:
                 self.logger.debug(
                     f"ファイルは新しすぎるため削除対象外です: {file_path} "
-                    f"(作成日時: {file_creation_time.strftime('%Y-%m-%d %H:%M:%S')}, "
+                    f"(更新日時: {file_modification_time.strftime('%Y-%m-%d %H:%M:%S')}, "
                     f"基準時刻: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})"
                 )
 
             return is_old
         except (OSError, ValueError) as e:
-            self.logger.warning(f"ファイル作成時刻の取得に失敗しました: {file_path} - {e}")
+            self.logger.warning(f"ファイル更新時刻の取得に失敗しました: {file_path} - {e}")
             return False
 
     def _should_delete_file(self, file_path: Path) -> bool:

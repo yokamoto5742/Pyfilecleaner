@@ -22,10 +22,8 @@ class FileCleaner:
 
     def _load_settings(self) -> None:
         """設定ファイルから対象ディレクトリと拡張子を読み込む"""
-        # target_dir1, target_dir2, ... を読み込む
         self.target_dirs = self._get_target_directories()
 
-        # target_extensions を読み込む
         extensions_str = get_config_value(
             self.config, 'Settings', 'target_extensions', '*'
         )
@@ -40,21 +38,19 @@ class FileCleaner:
                     if ext.strip()
                 ]
 
-        # file_cleanup_hour を読み込む
         cleanup_hour_str = get_config_value(
-            self.config, 'Settings', 'file_cleanup_hour', '1'
+            self.config, 'Settings', 'file_cleanup_hour', '24'
         )
         try:
             self.file_cleanup_hour = int(cleanup_hour_str)
         except (ValueError, TypeError):
             self.logger.warning(
-                f"file_cleanup_hour の値が不正です: {cleanup_hour_str}。デフォルト値 1 を使用します"
+                f"file_cleanup_hour の値が不正です: {cleanup_hour_str}。デフォルト値を使用します"
             )
-            self.file_cleanup_hour = 1
+            self.file_cleanup_hour = 24
 
         self.logger.info(f"対象ディレクトリ: {self.target_dirs}")
         self.logger.info(f"対象拡張子: {self.target_extensions}")
-        self.logger.info(f"削除対象期間: {self.file_cleanup_hour}時間以前に更新されたファイル")
 
     def _get_target_directories(self) -> list[str]:
         """Pathsセクションからtarget_dirで始まるすべてのディレクトリを取得"""
@@ -76,7 +72,6 @@ class FileCleaner:
         """ファイルが削除対象の期間より古いかを判定"""
         try:
             stat_info = file_path.stat()
-            # st_mtimeは更新日時を返す
             file_modification_time = datetime.fromtimestamp(
                 stat_info.st_mtime, ZoneInfo("Asia/Tokyo")
             )
@@ -92,7 +87,7 @@ class FileCleaner:
                 )
             else:
                 self.logger.debug(
-                    f"ファイルは新しすぎるため削除対象外です: {file_path} "
+                    f"ファイルは削除対象外です: {file_path} "
                     f"(更新日時: {file_modification_time.strftime('%Y-%m-%d %H:%M:%S')}, "
                     f"基準時刻: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})"
                 )
@@ -173,7 +168,6 @@ class FileCleaner:
 
         self.logger.info(f"クリーンアップを開始します: {directory}")
 
-        # ディレクトリ内のアイテムを取得
         items = list(target_path.iterdir())
 
         for item in items:
@@ -185,11 +179,10 @@ class FileCleaner:
                         result['failed_files'] += 1
                 else:
                     result['skipped_files'] += 1
-                    self.logger.debug(f"対象外のファイルをスキップしました: {item}")
+                    self.logger.debug(f"削除対象外ファイルをスキップしました: {item}")
 
             elif item.is_dir():
                 if '*' in self.target_extensions:
-                    # 全ファイル対象の場合はディレクトリごと削除
                     if self._delete_directory(item):
                         result['deleted_dirs'] += 1
                     else:
@@ -207,7 +200,7 @@ class FileCleaner:
 
     def _clean_directory_recursive(self, directory: Path) -> dict[str, int]:
         """
-        ディレクトリを再帰的にクリーンアップ（特定拡張子のみ削除）
+        ディレクトリを再帰的にクリーンアップ
 
         Args:
             directory: クリーンアップ対象のディレクトリ
@@ -241,7 +234,6 @@ class FileCleaner:
                 result['deleted_dirs'] += sub_result['deleted_dirs']
                 result['failed_dirs'] += sub_result['failed_dirs']
 
-        # 空になったディレクトリを削除
         try:
             if not any(directory.iterdir()):
                 directory.rmdir()
@@ -272,25 +264,14 @@ class FileCleaner:
         return results
 
     def print_summary(self, results: dict[str, dict[str, int]]) -> None:
-        """クリーンアップ結果のサマリーを出力"""
+        """クリーンアップ結果のサマリを出力"""
         total_deleted_files = 0
         total_deleted_dirs = 0
         total_failed_files = 0
         total_failed_dirs = 0
         total_skipped_files = 0
 
-        print("\n" + "=" * 60)
-        print("クリーンアップ結果サマリー")
-        print("=" * 60)
-
         for directory, result in results.items():
-            print(f"\nディレクトリ: {directory}")
-            print(f"  削除したファイル: {result['deleted_files']}")
-            print(f"  削除したフォルダ: {result['deleted_dirs']}")
-            print(f"  スキップしたファイル: {result['skipped_files']}")
-            print(f"  失敗したファイル: {result['failed_files']}")
-            print(f"  失敗したフォルダ: {result['failed_dirs']}")
-
             total_deleted_files += result['deleted_files']
             total_deleted_dirs += result['deleted_dirs']
             total_failed_files += result['failed_files']

@@ -1,0 +1,29 @@
+============================================================
+プロジェクト構造: Pyfilecleaner
+パス: C:\Users\yokam\PycharmProjects\Pyfilecleaner
+生成日時: 2025-12-26 12:54:37
+============================================================
+
+└── Pyfilecleaner
+    ├── app
+    │   └── __init__.py
+    ├── docs
+    │   └── LICENSE
+    ├── scripts
+    │   ├── __init__.py
+    │   ├── check_file_times.py
+    │   ├── project_structure.py
+    │   └── version_manager.py
+    ├── service
+    │   ├── __init__.py
+    │   └── filecleaner.py
+    ├── utils
+    │   ├── config.ini
+    │   ├── __init__.py
+    │   ├── config_manager.py
+    │   └── log_rotation.py
+    ├── requirements.txt
+    ├── build.py
+    ├── CLAUDE.md
+    ├── main.py
+    └── pyrightconfig.json

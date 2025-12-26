@@ -7,29 +7,21 @@ from utils.log_rotation import setup_debug_logging, setup_logging
 
 
 def main() -> int:
-    """メイン処理"""
     try:
-        # 設定ファイルの読み込み
         config = load_config()
 
-        # ログシステムの初期化
         setup_logging(config)
         setup_debug_logging(config)
 
         logger = logging.getLogger(__name__)
-        logger.info("ファイルクリーナーを開始します")
+        logger.info("ファイル削除を開始します")
 
-        # ファイルクリーナーの実行
         cleaner = FileCleaner(config)
 
-        # 対象ディレクトリが設定されているか確認
         if not cleaner.target_dirs:
             logger.error("対象ディレクトリが設定されていません")
-            print("エラー: 対象ディレクトリが設定されていません")
-            print("config.ini の [Paths] セクションに target_dir を設定してください")
             return 1
 
-        # 対象拡張子の表示
         if '*' in cleaner.target_extensions:
             print("対象: すべてのファイル")
         else:
@@ -39,12 +31,7 @@ def main() -> int:
         for i, dir_path in enumerate(cleaner.target_dirs, 1):
             print(f"  {i}. {dir_path}")
 
-        # クリーンアップの実行
         results = cleaner.clean_all()
-
-        # 結果の表示
-        cleaner.print_summary(results)
-
         logger.info("ファイルクリーナーが正常に完了しました")
         return 0
 

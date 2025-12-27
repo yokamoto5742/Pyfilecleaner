@@ -5,5 +5,4 @@
   "exclude": ["tests", "scripts"],
   "reportMissingTypeStubs": false,
   "reportUnusedVariable": true,
-  "reportUnusedImport": true
 }

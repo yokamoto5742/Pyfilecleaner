@@ -42,7 +42,7 @@ class FileCleaner:
             self.config, 'Settings', 'file_cleanup_hour', '24'
         )
         try:
-            self.file_cleanup_hour = int(cleanup_hour_str)
+            self.file_cleanup_hour = int(cleanup_hour_str or '24')
         except (ValueError, TypeError):
             self.logger.warning(
                 f"file_cleanup_hour の値が不正です: {cleanup_hour_str}。デフォルト値を使用します"
@@ -239,7 +239,7 @@ class FileCleaner:
                 directory.rmdir()
                 self.logger.info(f"空のディレクトリを削除しました: {directory}")
                 result['deleted_dirs'] += 1
-        except OSError as e:
+        except OSError:
             self.logger.debug(f"ディレクトリは空ではないため削除しませんでした: {directory}")
 
         return result
@@ -271,7 +271,7 @@ class FileCleaner:
         total_failed_dirs = 0
         total_skipped_files = 0
 
-        for directory, result in results.items():
+        for _, result in results.items():
             total_deleted_files += result['deleted_files']
             total_deleted_dirs += result['deleted_dirs']
             total_failed_files += result['failed_files']
